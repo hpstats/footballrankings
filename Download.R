@@ -2,10 +2,35 @@ library(data.table)
 library(RCurl)
 library(tidyr)
 library(stringr)
-URL <- "https://raw.githubusercontent.com/openfootball/eng-england/master/2018-19/1-premierleague.txt"
-x <- as.data.table(strsplit(getURL(URL, ssl.verifypeer = FALSE), '\n')[[1]])
-z <- x[substr(x$V1, 1, 1) != '#' & x$V1 != '' & substr(x$V1, 1, 8) != 'Matchday']
-z$date <- as.Date(ifelse(substr(z$V1, 1, 1) == '[', substr(z$V1, 6, str_locate(z$V1, ']') - 1), NA),
-                  format = "%b/%d")
-z <- fill(z, date)
-zz <- z[substr(z$V1, 1, 1) != '[']
+URL <- "https://projects.fivethirtyeight.com/soccer-api/club/spi_matches.csv"
+matchdata <- as.data.table(read.csv(URL, fileEncoding = "UTF-8", stringsAsFactors = FALSE))
+teams1 <- data.table(unique(matchdata$team1))
+teams2 <- data.table(unique(matchdata$team2))
+teamlist <- data.table(unique(rbind(teams1, teams2)))[order(V1)]
+str(teamlist)
+comps <- data.table(unique(matchdata$league))[order(V1)]
+runningtotals <- data.table(team = teamlist$V1,
+                            datelast = as.Date("1999-12-31"),
+                            numerator = 0,
+                            denominator = 0)
+
+goalratio <- 0.5
+xgratio <- 0.5
+nsxgratio <- 0.5
+
+goalweight <- 1
+xgweight <- 1
+nsxgweight <- 1
+
+matchdata2 <- matchdata[, c("date", "team1", "team2", "score1", "score2", "xg1", "xg2", "nsxg1", "nsxg2")]
+matchdata2$perfscore1 <- goalweight * ifelse(matchdata2$score1 > matchdata2$score2, 1 -
+                                               (1 - goalratio) ^ (matchdata2$score1 - matchdata2$score2),
+                                             (1 - goalratio) ^ (matchdata2$score2 - matchdata2$score1)
+                                             - 1) +
+                         xgweight * ifelse(matchdata2$xg1 > matchdata2$xg2, 1 - 
+                                             (1 - xgratio) ^ (matchdata2$xg1 - matchdata2$xg2),
+                                           (1 - xgratio) ^ (matchdata2$xg2 - matchdata2$xg1) - 1) +
+                         nsxgweight * ifelse(matchdata2$nsxg1 > matchdata2$nsxg2, 1 - 
+                                               (1 - nsxgratio) ^ (matchdata2$nsxg1 - matchdata2$nsxg2),
+                                             (1 - nsxgratio) ^ (matchdata2$nsxg2 - matchdata2$nsxg1) - 1)
+matchdata2$perfscore2 <- - matchdata2$perfscore1
