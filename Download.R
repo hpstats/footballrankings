@@ -44,8 +44,15 @@ matchdata2$perfscore1 <- ifelse(is.na(matchdata2$xg1) == FALSE,
                                              (1 - noxggoalratio) ^ (matchdata2$score2 - matchdata2$score1)
                                              - 1))
 matchdata2$perfscore2 <- - matchdata2$perfscore1
-matchdata2$rating.after1 <- NA
-matchdata2$rating.after2 <- NA
+matchdata2$rating.after1 <- 0
+matchdata2$rating.after2 <- 0
+
+calcs <- data.table(rating1 = as.numeric(0),
+                    rating2 = as.numeric(0),
+                    numerator1 = as.numeric(0),
+                    numerator2 = as.numeric(0),
+                    denominator1 = as.numeric(0),
+                    denominator2 = as.numeric(0))
 
 for (i in 1:nrow(matchdata2)){
   rating1 <- ifelse(runningtotals$denominator[runningtotals$team == matchdata2$team1[i]] == 0,
